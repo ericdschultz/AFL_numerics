@@ -56,22 +56,26 @@ def nonabelian_partition(dims, unitary, num):
     and a unitary mapping the representation to a chosen computational basis,
     we return a partition of 'num' random commuting projectors in each sector.
     """
-    if np.any(num > dims[:,1]):
-        raise ValueError("Requested number of projectors is larger than the dimension of at least one subspace.")
     N = unitary.shape[0]
-    partition = np.zeros((num * len(dims), N, N))
-    start = 0
+    partition = np.zeros((num * len(dims), N, N), dtype=np.complex128)
+    start = 0 # matrix index
+    k1 = 0 # Kraus indices
+    k2 = 0
     for i in range(len(dims)):
         d0, d1 = dims[i,0], dims[i,1]
-        randproj = get_qmap_partition('randproj', d1, num)
-        # Kraus indices of the current partition
-        k1 = i*num
-        k2 = k1 + num
-        # Effectively does 1_d0 ⊗ X for partition X
+        if d1 == 1:
+            randproj = np.array([1])
+        else:
+            randproj = get_qmap_partition('randproj', d1, num)
+        k2 = k1 + len(randproj) # Parition size could be < num
+        # Effectively does 1 ⊗ X'
         for _ in range(d0):
             stop = start + d1
             partition[k1:k2, start:stop, start:stop] = randproj
             start = stop
+        k1 = k2
+    if k2 < len(partition):
+        partition = partition[:k2,:,:]
     return np.einsum('ij,ajk,lk->ail', unitary, partition, unitary.conj(), optimize='greedy')
 
 def anticomm_partition(U, num, mode=3):

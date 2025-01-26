@@ -36,7 +36,10 @@ def AFL_args(sym, A, pert, psize, mix, rand, N):
     if sym == 'W':
         vecs, inds = cat_map.cat_W_vecs(N)
     else:
-        vecs, inds = cat_map.cat_R_vecs(N, A[0,1])
+        s = np.gcd(A[0,1], A[1,1]-1)
+        if s % 2 == 0:
+            s //= 2
+        vecs, inds = cat_map.cat_R_vecs(N, s)
     X = partitions.sym_partition(vecs, inds, psize, mixing=mix, randomize=rand)
     return (weights, X, U, eigs)
 

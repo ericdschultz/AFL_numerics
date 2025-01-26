@@ -180,7 +180,7 @@ def nonabelian_dims(N, s):
     irreps1D = np.array([[1, M//2+1],
                          [1, M//2-1]])
     irreps2D = np.repeat(np.array([[2, M]]), (s-1)//2, axis=0)
-    dims = np.append(irreps1D, irreps2D)
+    dims = np.append(irreps1D, irreps2D, axis=0)
     return dims
 
 
@@ -200,7 +200,7 @@ def rep_to_qbasis(N, s):
     # Slowest to fastest index should be (row, irrep, column)
     # i.e. first count vectors in each irrep, then move to next irrep, then get components
     # We can then append the irreps together by just reshaping to (N, N-M)
-    vecs0 = np.zeros(N, (s-1)//2, 2*M)
+    vecs0 = np.zeros((N, (s-1)//2, 2*M))
 
     # W∆ nonzero
     for i in range(M//2 - 1):
@@ -222,12 +222,12 @@ def rep_to_qbasis(N, s):
             up = (j + k*s) % N
             down = (N//2 - j - k*s) % N
             vecs0[up, j-1, k] = 1
-            vecs0[down, j-1, k+M] = 1
+            vecs0[down, j-1, k+M] = 1 - 2*(up&1)
             
     vecs0_appended = np.reshape(vecs0, (N, N-M))
     # Orthogonal matrix maps a vector in the representation basis to the q-basis.
     to_qbasis = np.append(np.append(vecs_plus, vecs_minus, axis=1), vecs0_appended, axis=1)
-    assert np.allclose(to_qbasis.T @ to_qbasis, np.eye((N,N))), "Matrix is not orthogonal."
+    assert np.allclose(to_qbasis.T @ to_qbasis, np.eye(N)), "Matrix is not orthogonal."
     return to_qbasis
 
 
