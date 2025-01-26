@@ -112,7 +112,7 @@ def cat_W_vecs(N):
     We also return the indices where each charge sector begins.
     """
     if N % 4 != 0:
-        raise ValueError("Cat map W is not defined for odd N.")
+        raise ValueError("cat_W_vecs only supports the guaranteed symmetric case of 4|N.")
     
     '''
     W|j> = (-1)^j|N/2-j>
@@ -120,9 +120,10 @@ def cat_W_vecs(N):
         0(8)              4
       7     1          5     3
     6         2  --> 6         2  (with phase factors)
-      5     3          7     1
+      5     3          7     1 
          4                0
 
+    The even but not 4|N case is not supported here.
         0(10)              5
       9     1           6     4
     8         2  -->  7         3  (with phase factors)
@@ -150,6 +151,85 @@ def cat_W_vecs(N):
 
     indices = np.array([0, N//2 + 1])
     return eigvecs, indices
+
+def is_odd_prime(s):
+    """
+    Returns whether the given integer s is prime.
+    """
+    if s <= 1 or s % 2 == 0:
+        return False
+    for a in range(3, int(np.sqrt(s)) + 1, 2):
+        if s % a == 0:
+            return False
+    return True
+
+
+def nonabelian_dims(N, s):
+    """
+    The cat map R and W symmetries form a nonabelian algebra, which has a factor representation
+        H = ⊕ (K ⊗ K') for irrep K and trivial space K'.
+    See the paper for the explicit construction.
+    This function returns the dimensions of K and K' as an array
+    [[dim K_1, dim K'_1],
+     [dim K_2, dim K'_2],
+     ...]
+    """
+    if not (N % 4 == 0 and N % s == 0 and is_odd_prime(s)):
+        raise ValueError("Only supports the symmetry algebra for N=sM with 4|M and s odd prime.")
+    M = N // s
+    irreps1D = np.array([[1, M//2+1],
+                         [1, M//2-1]])
+    irreps2D = np.repeat(np.array([[2, M]]), (s-1)//2, axis=0)
+    dims = np.append(irreps1D, irreps2D)
+    return dims
+
+
+def rep_to_qbasis(N, s):
+    """
+    The cat map R and W symmetries form a nonabelian algebra, which has a factor representation
+        H = ⊕ (K ⊗ K') for irrep K and trivial space K'.
+    See the paper for the explicit construction.
+    This function returns the orthogonal map from this representation to the q-basis.
+    for the simplified case of N = sM with 4|M and s an odd prime.
+    """
+    if not (N % 4 == 0 and N % s == 0 and is_odd_prime(s)):
+        raise ValueError("Only supports the symmetry algebra for N=sM with 4|M and s odd prime.")
+    M = N // s
+    vecs_plus = np.zeros((N, M//2+1))
+    vecs_minus = np.zeros((N, M//2-1))
+    # Slowest to fastest index should be (row, irrep, column)
+    # i.e. first count vectors in each irrep, then move to next irrep, then get components
+    # We can then append the irreps together by just reshaping to (N, N-M)
+    vecs0 = np.zeros(N, (s-1)//2, 2*M)
+
+    # W∆ nonzero
+    for i in range(M//2 - 1):
+        ks = s * (i + 1 - M//4)
+        up = ks % N
+        down = (N//2 - ks) % N
+        sign = 1 - 2*((M//4 + ks) & 1) # 1-2(q&1) == (-1)**q, but more fun
+        vecs_plus[up, i+1] = 1 / np.sqrt(2)
+        vecs_minus[up, i] = 1 / np.sqrt(2)
+        vecs_plus[down, i+1] = sign / np.sqrt(2)
+        vecs_minus[down, i] = -sign / np.sqrt(2)
+    # Fixed points of W
+    vecs_plus[N//4, -1] = 1
+    vecs_plus[3*N//4, 0] = 1
+
+    # W∆ = 0
+    for j in range(1, (s + 1) // 2):
+        for k in range(M):
+            up = (j + k*s) % N
+            down = (N//2 - j - k*s) % N
+            vecs0[up, j-1, k] = 1
+            vecs0[down, j-1, k+M] = 1
+            
+    vecs0_appended = np.reshape(vecs0, (N, N-M))
+    # Orthogonal matrix maps a vector in the representation basis to the q-basis.
+    to_qbasis = np.append(np.append(vecs_plus, vecs_minus, axis=1), vecs0_appended, axis=1)
+    assert np.allclose(to_qbasis.T @ to_qbasis, np.eye((N,N))), "Matrix is not orthogonal."
+    return to_qbasis
+
 
 
 ''' Cat map (and helper functions) including the full Gauss sum below. '''

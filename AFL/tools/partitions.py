@@ -43,6 +43,37 @@ def prob_measurement(K, p):
     X = np.append(X1, X2, axis=0)
     return X
 
+def nonabelian_partition(dims, unitary, num):
+    """
+    A nonabelian algebra, has a factor representation
+        H = ⊕ (K ⊗ K') for irrep K and trivial space K'
+    for which a motivated partition takes the form
+        X = ⊕ (1 ⊗ X')
+    Given a list of dimensions of K and K' as an array
+        [[dim K_1, dim K'_1],
+        [dim K_2, dim K'_2],
+        ...]
+    and a unitary mapping the representation to a chosen computational basis,
+    we return a partition of 'num' random commuting projectors in each sector.
+    """
+    if np.any(num > dims[:,1]):
+        raise ValueError("Requested number of projectors is larger than the dimension of at least one subspace.")
+    N = unitary.shape[0]
+    partition = np.zeros((num * len(dims), N, N))
+    start = 0
+    for i in range(len(dims)):
+        d0, d1 = dims[i,0], dims[i,1]
+        randproj = get_qmap_partition('randproj', d1, num)
+        # Kraus indices of the current partition
+        k1 = i*num
+        k2 = k1 + num
+        # Effectively does 1_d0 ⊗ X for partition X
+        for _ in range(d0):
+            stop = start + d1
+            partition[k1:k2, start:stop, start:stop] = randproj
+            start = stop
+    return np.einsum('ij,ajk,lk->ail', unitary, partition, unitary.conj(), optimize='greedy')
+
 def anticomm_partition(U, num, mode=3):
     """
     Returns a "local" partition in the presence of an anticommuting unitary.
