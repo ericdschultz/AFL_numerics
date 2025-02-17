@@ -95,3 +95,22 @@ def baker_R(N, PBC=False):
     for j in np.arange(N):
         R[j, N - 1 - j] = 1
     return R
+
+def baker_R_vecs(N, PBC=False):
+    """
+    Explicitly constructs the eigenbasis for the baker's map R symmetry.
+    Classically, R(q,p) = (1 - q, 1 - p).
+    R can be quantized for periodic or anti-periodic boundary conditions (PBC or APBC).
+    R is a symmetry of the quantum bakers map only for APBC with r=1/2 (requires even N).
+    """
+    if PBC:
+        return block_diag(1, baker_R_vecs(N - 1, PBC=False))
+
+    eigvecs = np.zeros((N,N))
+    for j in np.arange(N):
+        sign = 1 if j < N // 2 else -1
+        eigvecs[j, j] = sign / np.sqrt(2)
+        eigvecs[j, N - 1 - j] = 1 / np.sqrt(2)
+    if N % 2 == 1:
+        eigvecs[N//2, N//2] = 1
+    return eigvecs

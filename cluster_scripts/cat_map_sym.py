@@ -30,7 +30,8 @@ import AFL.tools.partitions as partitions
 from AFL.tools.floquet import eig_sort
 
 def AFL_args(sym, A, pert, psize, mix, rand, N):
-    U = cat_map.cat_unitary_gauss(N, A, pert)
+    shear = cat_map.typ_pshear(N, pert)
+    U = cat_map.cat_unitary_gauss(N, A) @ shear
     _, eigs = eig_sort(U)
     weights = np.ones(N) / N
     if sym == 'W':
@@ -45,6 +46,10 @@ def AFL_args(sym, A, pert, psize, mix, rand, N):
 
 def main(sym, matrix, pert, psize, dims, mix=False, rand=True):
     A = np.array(matrix).reshape((2,2))
+
+    kmax = cat_map.max_pert(A, 1, 0)
+    if pert > kmax:
+        raise ValueError('Perturbation strength exceeds Anosov bound of {0}'.format(kmax))
 
     file = 'cat_sym{}_{}_k{}_m{}r{}{}_N{}-{}'\
             .format(sym, '-'.join(map(str, matrix)), str(pert).replace('.','p'),

@@ -31,6 +31,15 @@ import AFL.tools.floquet as floquet
 
 def main(matrix, partition, psize, N, perts=np.arange(0, 0.3, 0.05), test=False):
     A = np.array(matrix).reshape((2,2))
+
+    kmax = cat_map.max_pert(A, 1, 0)
+    if any(pert > kmax for pert in perts):
+        raise ValueError('Perturbation strength exceeds Anosov bound of {0}'.format(kmax))
+
+    U = cat_map.cat_unitary_gauss(N, A)
+    unitaries = np.array([U @ cat_map.typ_pshear(N, pert) for pert in perts])
+    _, bases = floquet.good_basis_set(unitaries)
+    
     X = partitions.get_qmap_partition(partition, N, psize)
     weights = np.ones(N) / N
     max_time = entropy.time_estimate(N)
@@ -39,11 +48,6 @@ def main(matrix, partition, psize, N, perts=np.arange(0, 0.3, 0.05), test=False)
     
     # Multiprocessing
     pool = Pool(len(perts))
-
-    cat_func = partial(cat_map.cat_unitary_gauss, N, A)
-    unitaries = np.array(pool.map(cat_func, perts, 1))
-
-    _, bases = floquet.good_basis_set(unitaries)
 
     AFL_func = partial(entropy.AFL_entropy_helper, weights, X, max_time=max_time)
     entropies = pool.starmap(AFL_func, zip(unitaries, bases), 1)

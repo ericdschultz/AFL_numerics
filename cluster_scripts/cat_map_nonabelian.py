@@ -26,7 +26,13 @@ from AFL.tools.floquet import eig_sort
 
 def main(matrix, pert, N, psize):
     A = np.array(matrix).reshape((2,2))
-    U = cat_map.cat_unitary_gauss(N, A, pert)
+
+    kmax = cat_map.max_pert(A, 1, 0)
+    if pert > kmax:
+        raise ValueError('Perturbation strength exceeds Anosov bound of {0}'.format(kmax))
+
+    shear = cat_map.typ_pshear(N, pert)
+    U = cat_map.cat_unitary_gauss(N, A) @ shear
     _, eigs = eig_sort(U)
     weights = np.ones(N) / N
     max_time = int(4 * np.log(N) / np.log(psize))
