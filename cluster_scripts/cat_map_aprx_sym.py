@@ -8,9 +8,10 @@ The first element of each array is the perturbation strength of the symmetry bre
 This file runs each perturbation in parallel using multiprocessing.
 
 Command:
-python -O cat_map_aprx_sym.py sym a b c d psize -mix -rand N sympert -perts [PERTS]
+python -O cat_map_aprx_sym.py sym a b c d psize -mix -rand N sympert perts
 
-sym - 'W' or 'R' for the respective cat map symmetry
+sym - 'W' or 'R' for the respective cat map symmetry,
+      or 'none' for no symmetry (uses random partition)
 a b c d - cat map matrix elements
 psize - size of the partition in each charge sector
 mix - If included, Kraus operators can mix different charge sectors
@@ -19,7 +20,6 @@ rand - If included, randomize the basis in each charge sector
 N - Hilbert space dimension
 sympert - perturbation strength of symmetric shear
 perts - list of perturbation strengths for symmetry breaking shear
-        default [0, 0.001, 0.01, 0.1]
 """
 import argparse
 import numpy as np
@@ -31,7 +31,7 @@ import AFL.tools.entropy as entropy
 import AFL.tools.partitions as partitions
 import AFL.tools.floquet as floquet
 
-def main(sym, matrix, psize, N, sympert, perts=[0.0, 0.001, 0.01, 0.1], mix=False, rand=False):
+def main(sym, matrix, psize, N, sympert, perts, mix=False, rand=False):
     A = np.array(matrix).reshape((2,2))
 
     kmax = cat_map.max_pert(A, sympert, max(perts))
@@ -40,6 +40,7 @@ def main(sym, matrix, psize, N, sympert, perts=[0.0, 0.001, 0.01, 0.1], mix=Fals
 
     if sym == 'W':
         vecs, inds = cat_map.cat_W_vecs(N)
+        X = partitions.sym_partition(vecs, inds, psize, mixing=mix, randomize=rand)
     elif sym == 'R':
         s = np.gcd(A[0,1], A[1,1]-1)
         if s % 2 == 0:
@@ -47,10 +48,12 @@ def main(sym, matrix, psize, N, sympert, perts=[0.0, 0.001, 0.01, 0.1], mix=Fals
         if N % s != 0:
             raise ValueError("The chosen cat map and dimension is not R-symmetric.")
         vecs, inds = cat_map.cat_R_vecs(N, s)
+        X = partitions.sym_partition(vecs, inds, psize, mixing=mix, randomize=rand)
+    elif sym == 'none':
+        X = partitions.get_qmap_partition('randproj', N, psize)
     else:
         raise ValueError("Invalid cat map symmetry.")
     
-    X = partitions.sym_partition(vecs, inds, psize, mixing=mix, randomize=rand)
     weights = np.ones(N) / N
     max_time = entropy.time_estimate(N)
 
@@ -82,7 +85,7 @@ if __name__ == "__main__":
     # Arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("sym",
-                        help="qmap partition name")
+                        help="cat map symmetry 'W' or 'R', or 'none' for no symmetry")
     parser.add_argument("matrix", type=int, nargs=4,
                         help="matrix elements a b c d")
     parser.add_argument("psize", type=int,
@@ -95,8 +98,7 @@ if __name__ == "__main__":
                         help="Hilbert space dimension")
     parser.add_argument("sympert", type=float,
                         help="perturbation strength of symmetric shear")
-    parser.add_argument("-perts", type=float, nargs='+',
-                        default=[0.0, 0.001, 0.01, 0.1],
+    parser.add_argument("perts", type=float, nargs='+',
                         help="perturbation strengths of symmetry breaking shear")
     args = parser.parse_args()
     main(args.sym, args.matrix, args.psize, args.N, args.sympert, perts=args.perts, mix=args.mix, rand=args.rand)

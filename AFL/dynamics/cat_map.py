@@ -60,7 +60,7 @@ def max_pert(A, pmax, qmax):
     tr = A[0,0] + A[1,1]
     eigval = (tr - np.sqrt(tr**2 - 4)) / 2 # The lower eigenvalue
     pertvec = A @ np.array([qmax, pmax])
-    maxpert = (1 - eigval) / np.sum(pertvec**2)
+    maxpert = (1 - eigval) / np.linalg.norm(pertvec)
     return maxpert
 
 def typ_pshear(N, k):
