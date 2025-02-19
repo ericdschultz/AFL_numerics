@@ -44,7 +44,10 @@ def AFL_args(sym, A, pert, psize, mix, rand, N):
     X = partitions.sym_partition(vecs, inds, psize, mixing=mix, randomize=rand)
     return (weights, X, U, eigs)
 
-def main(sym, matrix, pert, psize, dims, mix=False, rand=True):
+def main(sym, matrix, pert, psize, dims, mix=False, rand=False):
+    if not (sym == 'W' or sym == 'R'):
+        raise ValueError("Invalid cat map symmetry.")
+
     A = np.array(matrix).reshape((2,2))
 
     kmax = cat_map.max_pert(A, 1, 0)
@@ -89,6 +92,4 @@ if __name__ == "__main__":
     parser.add_argument("-rand", action="store_true",
                         help="Randomize basis in each charge sector")
     args = parser.parse_args()
-    if not (args.sym == 'W' or args.sym == 'R'):
-        raise ValueError("Invalid cat map symmetry.")
     main(args.sym, args.matrix, args.pert, args.psize, args.dims, mix=args.mix, rand=args.rand)

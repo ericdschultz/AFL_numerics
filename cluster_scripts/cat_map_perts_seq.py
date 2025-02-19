@@ -53,7 +53,8 @@ if __name__ == "__main__":
                         help="size of the partition")
     parser.add_argument("N", type=int,
                         help="Hilbert space dimension")
-    parser.add_argument("-perts", type=float, nargs='*', default=np.arange(0, 0.3, 0.05),
+    parser.add_argument("-perts", type=float, nargs='+',
+                        default=np.arange(0, 0.3, 0.05),
                         help="perturbation strengths")
     args = parser.parse_args()
     main(args.matrix, args.partition, args.psize, args.N, perts=args.perts)
