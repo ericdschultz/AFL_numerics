@@ -2,6 +2,7 @@
 Computes AFL entropy over time on the perturbed cat map.
 Fixed perturbation and dimension, varying partition type.
 Saves the entropies in an .npy file.
+The first element of each array is the size of the partition in each charge sector.
 The array is in the order
     random projectors, R-symmetric, W-symmetric, nonabelian
 
@@ -11,13 +12,17 @@ python -O cat_map_nonabelian.py a b c d pert N psize
 a b c d - cat map matrix elements
 pert - perturbation strength
 N - Hilbert space dimension
-psize - size of the partition in each charge sector
-        randproj size is 2*psize for visualization purposes
+psize - total size of the partition
+        number of projectors in each charge sector:
+        R - psize / s
+        W - psize / 2
+        nonabelian - 2*psize/(s+3) <-- center has dimension (s+3)/2
 """
 import argparse
 import numpy as np
 from multiprocessing import Pool
 from functools import partial
+import warnings
 
 import AFL.dynamics.cat_map as cat_map
 import AFL.tools.entropy as entropy
@@ -45,18 +50,24 @@ def main(matrix, pert, N, psize):
     if s % 2 == 0:
         s //= 2
     
+    centerdim = (s + 3) // 2
+    psizes = np.array([psize, psize//s, psize//2, psize//centerdim])
+    if not (psize % 2 == 0 and psize % s == 0 and psize % centerdim == 0):
+        warnings.warn("Desired total partition size not divisible by abelian dimensions. Partitions will have different sizes.")
+    
     Xs = []
-    Xs.append(partitions.get_qmap_partition('randproj', N, 2*psize))
+    Xs.append(partitions.get_qmap_partition('randproj', N, psizes[0]))
 
     vecs, inds = cat_map.cat_R_vecs(N, s)
-    Xs.append(partitions.sym_partition(vecs, inds, psize, randomize=True))
+    Xs.append(partitions.sym_partition(vecs, inds, psizes[1], randomize=True))
 
     vecs, inds = cat_map.cat_W_vecs(N)
-    Xs.append(partitions.sym_partition(vecs, inds, psize, randomize=True))
+    Xs.append(partitions.sym_partition(vecs, inds, psizes[2], randomize=True))
 
     rep_dims = cat_map.nonabelian_dims(N, s)
     rep_basis = cat_map.rep_to_qbasis(N, s)
-    Xs.append(partitions.nonabelian_partition(rep_dims, rep_basis, psize))
+    Xs.append(partitions.nonabelian_partition(rep_dims, rep_basis, psizes[3]))
+
 
     # Multiprocessing
     pool = Pool(4)
@@ -67,7 +78,9 @@ def main(matrix, pert, N, psize):
 
     # Make all entropy lists of the same length
     min_time = min(map(len, entropies))
-    data = np.array([ent[:min_time] for ent in entropies])
+    ent_arr = np.array([ent[:min_time] for ent in entropies])
+
+    data = np.insert(ent_arr, 0, psizes, axis=1)
     np.save('data/' + file, data)
 
 if __name__ == "__main__":

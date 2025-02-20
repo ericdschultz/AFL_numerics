@@ -2,6 +2,7 @@
 .ipynb_checkpoints
 *.ipynb
 data/
+pubdata/
 images/
 plots/
 
