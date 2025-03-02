@@ -1,10 +1,10 @@
 """
 Computes AFL entropy over time on the perturbed cat map.
 Fixed perturbation and dimension, varying partition type.
-Saves the entropies in an .npy file.
+Saves the entropies in a .npy file.
 The first element of each array is the size of the partition in each charge sector.
-The array is in the order
-    random projectors, R-symmetric, W-symmetric, nonabelian
+The partition types (in the order of the saved .npy) are
+    randproj, W-symmetric, R-symmetric, nonabelian (commutant)
 
 Command:
 python -O cat_map_nonabelian.py a b c d pert N psize
@@ -40,11 +40,11 @@ def main(matrix, pert, N, psize):
     U = cat_map.cat_unitary_gauss(N, A) @ shear
     _, eigs = eig_sort(U)
     weights = np.ones(N) / N
-    max_time = int(4 * np.log(N) / np.log(psize))
+    max_time = entropy.time_estimate(N)
 
     file = 'cat_nonabel_{}_k{}_N{}_proj{}'.format('-'.join(map(str, matrix)),
-                                         str(pert).replace('.','p'),
-                                         N, psize)
+                                               str(pert).replace('.','p'),
+                                               N, psize)
     
     s = np.gcd(A[0,1], A[1,1]-1)
     if s % 2 == 0:
@@ -58,11 +58,11 @@ def main(matrix, pert, N, psize):
     Xs = []
     Xs.append(partitions.get_qmap_partition('randproj', N, psizes[0]))
 
-    vecs, inds = cat_map.cat_R_vecs(N, s)
-    Xs.append(partitions.sym_partition(vecs, inds, psizes[1], randomize=True))
-
     vecs, inds = cat_map.cat_W_vecs(N)
     Xs.append(partitions.sym_partition(vecs, inds, psizes[2], randomize=True))
+
+    vecs, inds = cat_map.cat_R_vecs(N, s)
+    Xs.append(partitions.sym_partition(vecs, inds, psizes[1], randomize=True))
 
     rep_dims = cat_map.nonabelian_dims(N, s)
     rep_basis = cat_map.rep_to_qbasis(N, s)
@@ -82,6 +82,12 @@ def main(matrix, pert, N, psize):
 
     data = np.insert(ent_arr, 0, psizes, axis=1)
     np.save('data/' + file, data)
+    # # The entropies reach max precision at different times, so save them separately
+    # labels = ['rand', 'R', 'W', 'comm']
+    # for i in range(4):
+    #     data = np.insert(entropies[i], 0, psizes[i])
+    #     file = 'cat_nonabel_{}_{}'.format(labels[i], file_end)
+    #     np.save('data/' + file, data)
 
 if __name__ == "__main__":
     # Arguments
