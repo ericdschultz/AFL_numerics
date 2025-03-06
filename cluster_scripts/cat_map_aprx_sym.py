@@ -62,9 +62,10 @@ def main(sym, matrix, psize, N, sympert, perts, mix=False, rand=False):
     _, bases = floquet.good_basis_set(unitaries)
     
 
-    file = 'cat_aprxsym{}_{}_k{}_m{}r{}{}_N{}'\
+    file = 'cat_aprxsym{}_{}_k{}_m{}r{}{}_N{}_kq{}-{}'\
             .format(sym, '-'.join(map(str, matrix)), str(sympert).replace('.','p'),
-                    str(mix)[0], str(rand)[0], psize, N)
+                    str(mix)[0], str(rand)[0], psize, N,
+                    str(perts[0]).replace('.','p'), str(perts[-1]).replace('.','p'))
     
     # Multiprocessing
     pool = Pool(len(perts))
