@@ -7,7 +7,7 @@ The first element of each array is the perturbation strength.
 This file runs each perturbation in parallel using multiprocessing.
 
 Command:
-python -O cat_map_perts.py [-perts PERTS] a b c d partition psize N
+python -O cat_map_perts.py a b c d partition psize N [-perts PERTS]
 
 perts (optional) - list of perturbation strengths; default [0,0.05,0.1,0.15,0.2,0.25]
 a b c d - cat map matrix
